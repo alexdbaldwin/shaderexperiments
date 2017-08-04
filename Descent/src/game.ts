@@ -7,6 +7,8 @@ class Game {
     private renderer: THREE.WebGLRenderer;
     private controls: OrbitControls;
 
+    private MAX_LINE_POINTS = 10;
+
     constructor() {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -46,11 +48,14 @@ class Game {
         `uniform mat4 projectionMatrix;
         uniform float aspect;
         varying vec2 vUv;
-        uniform vec3 linePoints[10];
+        uniform vec3 linePoints[${this.MAX_LINE_POINTS}];
+        uniform int lineStarts[${this.MAX_LINE_POINTS/2}];
+        uniform vec4 lineColors[${this.MAX_LINE_POINTS}];
+        uniform int numLines;
         uniform int numPoints;
         uniform float lineWidth;
         uniform float viewportWidth;
-        
+        float lerp = 0.0;
 
         float minimum_distance(vec2 v, vec2 w, vec2 p) {
             float l2 = distance(v,w);
@@ -58,43 +63,78 @@ class Game {
             //return distance(p,v);
             float t = max(0.0, min(1.0, dot(p - v, w - v) / (l2*l2)));
             vec2 projection = v + t * (w - v);  // Projection falls on the segment
+            lerp = distance(v, projection)/distance(v,w);
             return distance(p, projection);
         }
 
         void main() {
         
-        vec4 color = vec4(1,1,1,0.3);
+        vec4 color = vec4(1,1,1,0.0);
 
         float lineScreenWidth = 1.0/viewportWidth * lineWidth;
-        for(int i = 1; i < 10; i++){
-            if(i >= numPoints)
+
+        for(int i = 0; i < ${this.MAX_LINE_POINTS/2}; i++){
+            if(i >= numLines)
                 break;
-            vec4 startClip = projectionMatrix * viewMatrix * vec4(linePoints[i],1.0);
-            vec4 endClip = projectionMatrix * viewMatrix * vec4(linePoints[i-1],1.0);
-            startClip /= startClip.w;
-            endClip /= endClip.w;
+            for(int j = 0; j < ${this.MAX_LINE_POINTS}; j++){
+                if(j < lineStarts[i] + 1)
+                    continue;
+                if(j >= numPoints)
+                    break;
+                else if (i < numLines - 1)
+                    if(j >= lineStarts[i+1])
+                        break;
 
-            endClip.y *= 1.0/aspect;
-            startClip.y *= 1.0/aspect;
+                vec4 startClip = projectionMatrix * viewMatrix * vec4(linePoints[j],1.0);
+                vec4 endClip = projectionMatrix * viewMatrix * vec4(linePoints[j-1],1.0);
+                startClip /= startClip.w;
+                endClip /= endClip.w;
 
-            vec2 p = 2.0 * vUv - vec2(1.0,1.0);
+                endClip.y *= 1.0/aspect;
+                startClip.y *= 1.0/aspect;
 
-            if(minimum_distance(startClip.xy,endClip.xy,p) < lineScreenWidth){
-                color = vec4(1,0,1,1);
-                break;
+                vec2 p = 2.0 * vUv - vec2(1.0,1.0);
+
+                if(minimum_distance(startClip.xy,endClip.xy,p) < lineScreenWidth){
+                    color = mix(lineColors[j],lineColors[j-1],lerp);
+                    break;
+                }
             }
         }
+        
         
         gl_FragColor = color;
         //gl_FragColor = vec4(startClip.x,startClip.x,startClip.x,1);   
         }`
 
+
+        const lines: THREE.Vector3[] = [];
+        lines.push(...[new THREE.Vector3(0,3,0), new THREE.Vector3(4,2,0), new THREE.Vector3(4.5,2.5,1), new THREE.Vector3(5,-1,-2), new THREE.Vector3(3,-2,-3)]);
+        const numPoints = lines.length;
+        while(lines.length < this.MAX_LINE_POINTS)
+            lines.push(new THREE.Vector3());
+
+        const lineStarts: number[] = [];
+        lineStarts.push(0,3);
+        const numLines = lineStarts.length;
+        while(lineStarts.length < this.MAX_LINE_POINTS/2)
+            lineStarts.push(-1);
+
+        const lineColors: THREE.Vector4[] = [];
+        lineColors.push(new THREE.Vector4(1,1,0,1),new THREE.Vector4(1,0,0,1), new THREE.Vector4(0.8,0,0.8,1), new THREE.Vector4(0.7,1,0.2,1), new THREE.Vector4(0.2,1,1,1));
+        while(lineColors.length < this.MAX_LINE_POINTS)
+            lineColors.push(new THREE.Vector4(1,1,1,1));
+
+
         params.uniforms = { 
             projectionMatrix: {value: this.camera.projectionMatrix},
             aspect: {value: this.camera.aspect},
-            numPoints: {value: 4},
+            numPoints: {value: numPoints},
             lineWidth: {value: 15},
-            linePoints: {value: [new THREE.Vector3(0,3,0), new THREE.Vector3(4,2,0), new THREE.Vector3(5,-1,-2), new THREE.Vector3(3,-2,-3), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,0)]},
+            linePoints: {value: lines},
+            lineStarts: {value: lineStarts},
+            lineColors: {value: lineColors},
+            numLines: {value: numLines},
             viewportWidth: {value: window.innerWidth}
         };
         params.transparent = true;
