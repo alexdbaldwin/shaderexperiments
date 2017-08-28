@@ -94,7 +94,7 @@ class Game {
         cube2.position.set(1.0,1.0,-20);
 
         const dxf = new DXFLoader();
-         const b6 = dxf.load(parts.b6);
+/*          const b6 = dxf.load(parts.b6);
         b6.position.set(0,0,-5);
         b6.scale.set(10,10,10);
         this.scene.add(b6);
@@ -117,9 +117,12 @@ class Game {
         const b1 = dxf.load(parts.b1);
         b1.position.set(-6,0,-5);
         b1.scale.set(10,10,10);
-        this.scene.add(b1);
+        this.scene.add(b1); */
 
-
+        const crank = dxf.load(parts.crank);
+        crank.position.set(0,0,-5);
+        //crank.scale.set(10,10,10);
+        this.scene.add(crank);
 
 /*         this.lineDrawer = new LineDrawer(this.camera);
         this.camera.add(this.lineDrawer); */

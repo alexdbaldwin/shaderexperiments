@@ -18,6 +18,10 @@ export default class DFXLoader {
     public load = (dxf: string): THREE.Object3D => {
         this.lines = dxf.split('\n');
         this.object = new THREE.Object3D();
+        this.vertices = [];
+        this.indices = [];
+        this.colors = [];
+        this.index = 0;
         this.read();
         return this.object;
     }
@@ -31,10 +35,6 @@ export default class DFXLoader {
                 case "0":
                     switch (this.nextLine()) {
                         case "SECTION":
-                            this.vertices = [];
-                            this.indices = [];
-                            this.colors = [];
-                            this.index = 0;
                             break;
                         case "ENDSEC":
                             this.makeMesh();
@@ -50,6 +50,10 @@ export default class DFXLoader {
                 case "2":
                     switch (this.nextLine()) {
                         case "ENTITIES":
+                            this.vertices = [];
+                            this.indices = [];
+                            this.colors = [];
+                            this.index = 0;
                             break;
                     }
                     break;
@@ -144,6 +148,8 @@ export default class DFXLoader {
         switch (index) {
             case 30:
                 return new THREE.Color("#FF7F00");
+            case 250:
+                return new THREE.Color("#333333");
             case 251:
                 return new THREE.Color("#505050");
             case 253:
